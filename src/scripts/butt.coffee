@@ -167,12 +167,12 @@ stopwords = [
 # message must contain at least some word characters that we can butt
 is_string_buttable (str) ->
   # do a regex match on all word-like substring tokens, make sure we got something
-  str.search /[a-zA-Z]+/gi > 0
+  (str.search /[a-zA-Z]+/gi ) > 0
 
 how_many_butts (words) ->
 
 
-buttify (words) ->
+buttify (words, replace_freq_denom) ->
   # how many butts?
   # determine butts
   # perform buttification
@@ -180,23 +180,36 @@ buttify (words) ->
   # reform string
   words.join(' ')
 
-buttify_string (str) ->
-  if is_string_buttable
+buttify_string (str, replace_freq_denom) ->
     # attempt butt
-    buttify(str.split(' '))
+    buttify(str.split(' '), replace_freq_denom)
   else
     # if there's nothing we can do about it, just give it back
     str
 
+to_butt_or_not_to_butt (str, trigger_freq_denom) ->
+  if (Math.floor(Math.random() * trigger_freq_denom) + 1) == 1
+    is_string_buttable(str)
+  else
+    false
+
+# the main Hubot method
 module.exports = (robot) ->
 
+  # get env vars read into memory
   if trigger_env
     frequency_denom = parseInt(trigger_env)
   else
     frequency_denom = default_trigger_freq_denom
 
+  if replace_env
+    replace_denom = parseInt(replace_env)
+  else
+    replace_denom = default_replace_freq_denom
+
   # match on all incoming strings
   robot.hear /(.+)/i, (msg) ->
     original = escape(msg.match[1])
-    butted = buttify_string(msg)
-    msg.send butted	
+    if to_butt_or_not_to_butt(original)
+      butted = buttify_string(original, replace_denom)
+      msg.send butted	
