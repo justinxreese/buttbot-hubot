@@ -1,3 +1,5 @@
+# butt.coffee
+#
 # Description:
 #   butt.
 #
@@ -24,14 +26,25 @@
 # Author:
 #   devmage
 
+# -------------------------------------------------------------------------------------------------
+# configs and data
+
 # defaults
-default_trigger_freq_denom = 51 # buttbot default, one in 51 messages trigger the bot
-default_replace_freq_denom = 11 # buttbot default, one in 11 unique words per statement replaced
-meme = "butt" # configurable I guess but[t] why would you ever want to change it...
+DEFAULT_TRIGGER_FREQ_DENOM = 51 # buttbot default, one in 51 messages trigger the bot
+DEFAULT_REPLACE_FREQ_DENOM = 11 # buttbot default, one in 11 unique words per statement replaced
+MEME = "butt" # configurable I guess but[t] why would you ever want to change it...
 
 # environment variables
-trigger_env = process.env.HUBOT_BUTT_TRIGGER_FREQ
-replace_env = process.env.HUBOT_BUTT_REPLACE_FREQ
+triggerEnv = process.env.HUBOT_BUTT_TRIGGER_FREQ
+replaceEnv = process.env.HUBOT_BUTT_REPLACE_FREQ
+
+# utils
+unless String::trim then String::trim = -> @replace /^\s+|\s+$/g, ""
+
+Array::unique = ->
+  output = {}
+  output[@[key]] = @[key] for key in [0...@length]
+  value for key, value of output
 
 # list of stopwords to ignore for butting
 stopwords = [
@@ -164,15 +177,20 @@ stopwords = [
   "your"
 ]
 
+# -------------------------------------------------------------------------------------------------
+# helper methods
+
 # message must contain at least some word characters that we can butt
-is_string_buttable (str) ->
+isStringButtable (str) ->
   # do a regex match on all word-like substring tokens, make sure we got something
   (str.search /[a-zA-Z]+/gi ) > 0
 
-how_many_butts (words) ->
+howManyButts (words, replaceFreqDenom) ->
+  uniques = words.unique
+  (Math.floor(uniques.size() / (Math.random() * replaceFreqDenom)) + 1)
 
 
-buttify (words, replace_freq_denom) ->
+buttify (words, replaceFreqDenom) ->
   # how many butts?
   # determine butts
   # perform buttification
@@ -180,36 +198,38 @@ buttify (words, replace_freq_denom) ->
   # reform string
   words.join(' ')
 
-buttify_string (str, replace_freq_denom) ->
-    # attempt butt
-    buttify(str.split(' '), replace_freq_denom)
-  else
-    # if there's nothing we can do about it, just give it back
-    str
+# attempt butt
+# if we get to this point, we've already validated str as an input string
+buttifyString (str, replaceFreqDenom) ->
+  words = str.split(' ')
+  
 
-to_butt_or_not_to_butt (str, trigger_freq_denom) ->
-  if (Math.floor(Math.random() * trigger_freq_denom) + 1) == 1
-    is_string_buttable(str)
+# determine whether we are to butt (check trigger and validate input)
+toButtOrNotToButt (str, triggerFreqDenom) ->
+  if (Math.floor(Math.random() * triggerFreqDenom) + 1) == 1
+    isStringButtable(str)
   else
     false
 
+# -------------------------------------------------------------------------------------------------
 # the main Hubot method
+
 module.exports = (robot) ->
 
   # get env vars read into memory
-  if trigger_env
-    frequency_denom = parseInt(trigger_env)
+  if triggerEnv
+    frequencyDenom = parseInt(trigger_env)
   else
-    frequency_denom = default_trigger_freq_denom
+    frequencyDenom = DEFAULT_TRIGGER_FREQ_DENOM
 
-  if replace_env
-    replace_denom = parseInt(replace_env)
+  if replaceEnv
+    replaceDenom = parseInt(replaceEnv)
   else
-    replace_denom = default_replace_freq_denom
+    replaceDenom = DEFAULT_REPLACE_FREQ_DENOM
 
   # match on all incoming strings
   robot.hear /(.+)/i, (msg) ->
-    original = escape(msg.match[1])
-    if to_butt_or_not_to_butt(original)
-      butted = buttify_string(original, replace_denom)
+    original = escape(msg.match[1]).trim.toLowerCase()
+    if toButtOrNotToButt(original, frequencyDenom)
+      butted = buttifyString(original, replaceDenom)
       msg.send butted	
