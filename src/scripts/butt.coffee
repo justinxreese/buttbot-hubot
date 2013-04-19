@@ -180,29 +180,40 @@ stopwords = [
 # -------------------------------------------------------------------------------------------------
 # helper methods
 
-# message must contain at least some word characters that we can butt
-isStringButtable (str) ->
-  # do a regex match on all word-like substring tokens, make sure we got something
-  (str.search /[a-zA-Z]+/gi ) > 0
+# figure out how many uniques
+# if the script is triggered, it will always butt at least one word
+howManyButts (size, replaceFreqDenom) ->
+  Math.floor(size / replaceFreqDenom) + 1
 
-howManyButts (words, replaceFreqDenom) ->
+# pick words to butt
+whichToButt (uniques, numToButt) ->
+  output = []
+  while output.size() < numToButt
+    nextButtIdx = Math.floor(Math.random * uniques.size())
+    output = (output.concat uniques[nextButtIdx]).unique
+  output
+
+
+
+# main script runner
+buttify (str, replaceFreqDenom) ->
+  words = str.split(' ')
   uniques = words.unique
-  (Math.floor(uniques.size() / (Math.random() * replaceFreqDenom)) + 1)
-
-
-buttify (words, replaceFreqDenom) ->
+  
   # how many butts?
-  # determine butts
+  numToButt = howManyButts(uniques.size(), replaceFreqDenom)
+
+  # which will we butt?
+  toButt = whichToButt(uniques, numToButt)
+
   # perform buttification
 
   # reform string
   words.join(' ')
 
-# attempt butt
-# if we get to this point, we've already validated str as an input string
-buttifyString (str, replaceFreqDenom) ->
-  words = str.split(' ')
-  
+# message must contain at least some word-like tokens that we can butt
+isStringButtable (str) ->
+  (str.search /[a-zA-Z]+/gi ) > 0
 
 # determine whether we are to butt (check trigger and validate input)
 toButtOrNotToButt (str, triggerFreqDenom) ->
@@ -231,5 +242,5 @@ module.exports = (robot) ->
   robot.hear /(.+)/i, (msg) ->
     original = escape(msg.match[1]).trim.toLowerCase()
     if toButtOrNotToButt(original, frequencyDenom)
-      butted = buttifyString(original, replaceDenom)
+      butted = buttify(original, replaceDenom)
       msg.send butted	
